@@ -1,0 +1,26 @@
+networks:
+  1panel-network:
+    external: true
+
+services:
+  mdc-ng:
+    image: leolitaly/mdc-ngi:26.8.0
+    container_name: ${CONTAINER_NAME}
+    user: "0:0"
+    labels:
+      createdBy: "Apps"
+    restart: unless-stopped
+    networks:
+      - 1panel-network
+    ports:
+      - ${PANEL_APP_PORT_HTTP}:19218
+    environment:
+      TZ: "Europe/Rome"
+    env_file:
+      - ${GLOBAL_ENV_FILE:-/etc/1panel/envs/global.env}
+      - ${ENV_FILE:-/etc/1panel/envs/default.env}
+    volumes:
+      - ${MDC_NG_ROOT_PATH}/data:/data
+    stop_grace_period: 40s
+    security_opt:
+      - no-new-privileges:true
