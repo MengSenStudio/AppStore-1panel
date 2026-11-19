@@ -47,8 +47,6 @@ fi
 echo "$(date): Step 1 - Cloning repository..."
 repos=(
     'https://github.com/MengSenStudio/AppStore-1panel'
-    'https://gitee.com/qyg2297248353/appstore-1panel'
-    'https://gitea.com/QYG2297248353/appstore-1panel'
 )
 
 if [ -d "${BASE_DIR:?}/1panel/resource/apps/local/appstore-localApps" ]; then
