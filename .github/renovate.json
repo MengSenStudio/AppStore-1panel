@@ -400,6 +400,15 @@
         "apps/omnibox/1.*.*/*.yml"
       ],
       "allowedVersions": "<2.0.0"
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "mlikiowa/napcat-docker"
+      ],
+      "enabled": false
     }
   ],
   "prCreation": "immediate"
