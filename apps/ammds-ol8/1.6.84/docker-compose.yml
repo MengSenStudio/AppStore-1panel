@@ -9,7 +9,7 @@ services:
     labels:
       createdBy: "Apps"
     restart: always
-    network_mode: ${NETWORK_MODE:-host}
+    network_mode: ${NETWORK_MODE}
     tty: true
     stdin_open: true
     ulimits:
@@ -17,7 +17,8 @@ services:
         soft: 524288
         hard: 524288
     ports:
-      - ${PANEL_APP_PORT_HTTP:-8080}:${PANEL_APP_PORT_HTTP:-8080}
+      - ${PANEL_APP_PORT_HTTP}:${PANEL_APP_PORT_HTTP}
+      - ${PANEL_APP_PORT_API}:${PANEL_APP_PORT_API}
     env_file:
       - ${GLOBAL_ENV_FILE:-/etc/1panel/envs/global.env}
       - ${ENV_FILE:-/etc/1panel/envs/default.env}
@@ -30,5 +31,5 @@ services:
       - ${CUSTOM_MOUNT_DIRECTORY_3:-./default_mount_3}:${CUSTOM_MOUNT_DIRECTORY_3:-/default_mount_3}
     environment:
       - TZ=Asia/Shanghai
-      - NGINX_PORT=${PANEL_APP_PORT_HTTP:-8080}
+      - NGINX_PORT=${PANEL_APP_PORT_HTTP}
       - AMMDS_SERVER_PORT=${PANEL_APP_PORT_API:-9523}
