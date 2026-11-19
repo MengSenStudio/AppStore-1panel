@@ -2,7 +2,7 @@ name: 📬 问题反馈
 description: 提交使用中的相关问题
 title: "[问题反馈]"
 labels: bug
-assignees: QYG2297248353
+assignees: MS2297248353
 body:
   - type: markdown
     id: base_info
@@ -14,7 +14,7 @@ body:
       required: true
     attributes:
       label: "应用所在地址"
-      description: "https://github.com/QYG2297248353/appstore-1panel/tree/custom/apps/**"
+      description: "https://github.com/MengSenStudio/AppStore-1panel/tree/custom/apps/**"
   - type: dropdown
     id: feedback_type
     validations:
