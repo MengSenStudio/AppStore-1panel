@@ -49,7 +49,7 @@ jobs:
 
       - name: Clone DPanel repository
         run: |
-          git clone https://github.com/QYG2297248353/appstore-dpanel.git target-repo
+          git clone https://github.com/MengSenStudio/appstore-dpanel.git target-repo
 
       - name: Copy appstore to DPanel repository
         run: |
@@ -70,4 +70,4 @@ jobs:
           git add .
           git diff --cached --quiet || git commit -m "Synced apps from source repository via GitHub Actions"
           
-          git push https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/QYG2297248353/appstore-dpanel.git master
+          git push https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/MengSenStudio/appstore-dpanel.git master
