@@ -45,8 +45,8 @@ urls=(
     'https://install.lifebus.top/app_install.sh'
     'https://gitee.com/qyg2297248353/appstore-1panel/releases/download/v1.0/app_install.sh'
     'https://gitea.com/QYG2297248353/appstore-1panel/releases/download/install/app_install.sh'
-    'https://raw.githubusercontent.com/QYG2297248353/appstore-1panel/custom/script/app_install.sh'
-    'https://github.com/QYG2297248353/appstore-1panel/releases/download/install/app_install.sh'
+    'https://raw.githubusercontent.com/MengSenStudio/AppStore-1panel/custom/script/app_install.sh'
+    'https://github.com/MengSenStudio/AppStore-1panel/releases/download/install/app_install.sh'
 )
 
 download_successful=false
