@@ -409,6 +409,43 @@
         "mlikiowa/napcat-docker"
       ],
       "enabled": false
+    },
+    {
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "/postgres/",
+        "/redis/",
+        "/valkey/",
+        "/mysql/",
+        "/mariadb/",
+        "/mongo/",
+        "/memcached/",
+        "/rabbitmq/",
+        "/clickhouse/",
+        "/meilisearch/",
+        "/elasticsearch/",
+        "/opensearch/",
+        "/pgvecto/",
+        "/pgvector/"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "matchFileNames": [
+        "apps/postgresql/**",
+        "apps/postgresql-postgis/**",
+        "apps/redis/**",
+        "apps/mariadb/**",
+        "apps/mysql/**",
+        "apps/elastic-elasticsearch/**",
+        "apps/elastic-kibana/**"
+      ],
+      "enabled": true
     }
   ],
   "prCreation": "immediate"
