@@ -1,9 +1,8 @@
 name: Update app version in Renovate Branches
 
 # Renovate 只改 docker-compose.yml 里的镜像 tag，这里把 apps/<app>/<version> 目录名
-# 同步成新版本，保证 appstore 的目录结构正确。
-# 相比旧实现：不再使用已废弃的 ::set-output、不再每个应用单独 commit/push（N 次推送），
-# 只产生一次提交；并加上并发分组与推送重试。
+# 同步成主服务的新版本，保证 appstore 的目录结构正确。
+# 逻辑见 script/renovate_app_version.py：会跳过 pg/redis 等中间件、跳过人工命名目录。
 
 on:
   push:
@@ -32,6 +31,14 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: python -m pip install --quiet --upgrade pip pyyaml
+
       - name: Configure repo
         run: |
           git config --local user.email "githubaction@githubaction.com"
@@ -40,7 +47,6 @@ jobs:
       - name: Rename version directories
         run: |
           set -euo pipefail
-          chmod +x script/renovate-app-version.sh
 
           # 只看本次推送的提交改动的 docker-compose.yml。
           # 不加 -m：Renovate 推送的都是普通单父提交；如果推送的是 merge commit，
@@ -58,7 +64,7 @@ jobs:
           for file in "${files[@]}"; do
             IFS='/' read -r _ app_name old_version _ <<< "$file"
             echo "处理 $app_name（当前版本目录 $old_version）"
-            script/renovate-app-version.sh "$app_name" "$old_version"
+            python script/renovate_app_version.py "$app_name" "$old_version"
           done
 
       - name: Commit and push version directory changes
