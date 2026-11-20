@@ -8,4 +8,8 @@
 .vscode
 scan_arch_ruamel.py
 
+# Python
+__pycache__/
+*.py[cod]
+
 .trae/

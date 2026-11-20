@@ -15,7 +15,7 @@
 |---|---|
 | 仓库 | `MengSenStudio/AppStore-1panel` |
 | 默认分支 | `custom`：应用源文件与安装脚本 |
-| 发布分支 | `released`：由 `custom` 定时同步，安装脚本克隆该分支 |
+| 发布分支 | `released`：由 `custom` 自动同步（custom 更新后触发），安装脚本克隆该分支 |
 | 安装脚本 | [install.lifebus.top](https://install.lifebus.top/) |
 | Release | [install](https://github.com/MengSenStudio/AppStore-1panel/releases/tag/install)：存放安装脚本副本 |
 | 自动化 | Renovate 定时检查镜像版本并提交更新 PR |
@@ -378,7 +378,7 @@ done
 ## 数据更新说明
 
 + 应用镜像版本由 Renovate 定时检查，小版本自动合并，大版本保留 PR 由人工审核。
-+ `custom` 分支的变更每小时同步到 `released` 分支，安装脚本始终拉取 `released`。
++ `custom` 分支的变更会自动同步到 `released` 分支，安装脚本始终拉取 `released`。
 + 安装脚本本体位于 [install.lifebus.top](https://install.lifebus.top/)，与仓库 `script/` 目录内容保持一致。
 
 ---

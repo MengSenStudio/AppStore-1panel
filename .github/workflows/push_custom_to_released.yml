@@ -1,14 +1,32 @@
 name: Push custom to released
 
+# 安装脚本拉取的是 released 分支，这里把 custom 镜像过去。
+# 触发方式改为事件驱动（custom 更新 / appstore 重新生成后），不再每小时空跑一次。
+
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '2 * * * *'
+  push:
+    branches: [ custom ]
+  # process-apps 用的是 GITHUB_TOKEN 推送，不会触发 push 事件，
+  # 所以它的运行结束（无论成功与否）都同步一次，确保生成结果能到达 released。
+  workflow_run:
+    workflows:
+      - Process Apps and Commit Changes
+    types: [ completed ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: push-custom-to-released
+  cancel-in-progress: false
 
 jobs:
   push-branch:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
+    # 上游生成任务被取消时（有更新的一次已排队）不必同步，等新的那次跑完
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion != 'cancelled'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -16,8 +34,21 @@ jobs:
           ref: custom
 
       - name: Push to released branch
+        env:
+          RELEASE_TOKEN: ${{ secrets.GITHUBTOKEN }}
         run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/${{ github.repository }}.git
-          git push origin custom:released --force
+          set -euo pipefail
+          remote="https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+          # released 已经是同一个提交时不必再推送（省掉无意义的 force push）
+          released_sha="$(git ls-remote "${remote}" refs/heads/released | cut -f1)"
+          if [ "${released_sha}" = "$(git rev-parse HEAD)" ]; then
+            echo "released 已与 custom 一致，无需同步"
+            exit 0
+          fi
+
+          git push --force "${remote}" HEAD:released
+          echo "已把 custom 同步到 released"

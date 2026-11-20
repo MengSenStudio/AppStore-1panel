@@ -1,13 +1,21 @@
 name: Renovate
 
+# 每 6 小时扫描一次镜像/依赖版本（原来是每小时，收益很低但会持续制造 PR 和运行量）。
+# 需要立即处理冲突时，auto_merge 工作流会在勾选 rebase 复选框后手动 dispatch 本工作流。
+
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 */6 * * *"
   workflow_dispatch:
     inputs:
       manual-trigger:
         description: 'Manually trigger Renovate'
         default: ''
+
+concurrency:
+  group: renovate
+  # 串行执行，避免两次扫描重叠
+  cancel-in-progress: false
 
 jobs:
   renovate:

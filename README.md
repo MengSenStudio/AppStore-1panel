@@ -13,7 +13,7 @@
 | 项目 | 说明 |
 |---|---|
 | 默认分支 | `custom`：应用源文件与安装脚本 |
-| 发布分支 | `released`：由 `custom` 每小时同步，安装脚本克隆该分支 |
+| 发布分支 | `released`：由 `custom` 自动同步（custom 更新后触发），安装脚本克隆该分支 |
 | Release | [`install`](https://github.com/MengSenStudio/AppStore-1panel/releases/tag/install)：安装脚本副本 |
 | 自动化 | Renovate 定时检查镜像版本，小版本自动合并，大版本保留 PR 人工审核 |
 | 目录结构 | `apps/` 应用源文件、`script/` 安装脚本、`dockge/` Dockge 应用列表、`appstore/` 商店数据、`envs/` 公共环境变量 |

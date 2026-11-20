@@ -1,21 +1,35 @@
 name: Update app version in Renovate Branches
 
+# Renovate 只改 docker-compose.yml 里的镜像 tag，这里把 apps/<app>/<version> 目录名
+# 同步成新版本，保证 appstore 的目录结构正确。
+# 相比旧实现：不再使用已废弃的 ::set-output、不再每个应用单独 commit/push（N 次推送），
+# 只产生一次提交；并加上并发分组与推送重试。
+
 on:
   push:
     branches: [ 'renovate/*' ]
+    paths:
+      - 'apps/**/docker-compose.yml'
   workflow_dispatch:
-    inputs:
-      manual-trigger:
-        description: 'Manually trigger Renovate'
-        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: app-version-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   update-app-version:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # 只在 renovate/* 分支上工作，手动触发时也不会误改 custom
+    if: startsWith(github.ref_name, 'renovate/')
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
 
       - name: Configure repo
@@ -23,32 +37,48 @@ jobs:
           git config --local user.email "githubaction@githubaction.com"
           git config --local user.name "github-action update-app-version"
 
-      - name: Get list of updated files by the last commit in this branch separated by space
-        id: updated-files
+      - name: Rename version directories
         run: |
-          echo "::set-output name=files::$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | tr '\n' ' ')"
-          echo "Updated files: ${{ steps.updated-files.outputs.files }}"
+          set -euo pipefail
+          chmod +x script/renovate-app-version.sh
 
-      - name: Run renovate-app-version.sh on updated files
-        run: |
-          IFS=' ' read -ra files <<< "${{ steps.updated-files.outputs.files }}"
+          # 只看本次推送改动的 docker-compose.yml（合并提交也展开）
+          mapfile -t files < <(
+            git diff-tree --no-commit-id --name-only -r -m HEAD \
+              | grep -E '^apps/[^/]+/[^/]+/docker-compose\.yml$' \
+              | sort -u || true
+          )
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "本次推送没有 docker-compose.yml 变更"
+            exit 0
+          fi
+
           for file in "${files[@]}"; do
-            if [[ $file == *"docker-compose.yml"* ]]; then
-              app_name=$(echo $file | cut -d'/' -f 2)
-              old_version=$(echo $file | cut -d'/' -f 3)
-              echo "Running script for app: $app_name, old version: $old_version"
-              chmod +x .github/workflows/renovate-app-version.sh
-              .github/workflows/renovate-app-version.sh $app_name $old_version
-            fi
+            IFS='/' read -r _ app_name old_version _ <<< "$file"
+            echo "处理 $app_name（当前版本目录 $old_version）"
+            script/renovate-app-version.sh "$app_name" "$old_version"
           done
 
-      - name: Commit & Push Changes
+      - name: Commit and push version directory changes
         run: |
-          IFS=' ' read -ra files <<< "${{ steps.updated-files.outputs.files }}"
-          for file in "${files[@]}"; do
-            if [[ $file == *"docker-compose.yml"* ]]; then
-              app_name=$(echo $file | cut -d'/' -f 2)
-              echo "Committing changes for app: $app_name"
-              git add "apps/$app_name/*" && git commit -m "Update app version [skip ci]" --no-verify && git push || true
+          set -euo pipefail
+          git add -A apps
+          if git diff --cached --quiet; then
+            echo "版本目录无需变更"
+            exit 0
+          fi
+
+          git commit --quiet -m "chore: sync app version directories [skip ci]"
+          for attempt in 1 2 3; do
+            if git push --quiet origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "已推送版本目录变更"
+              exit 0
             fi
+            echo "推送失败（第 ${attempt} 次），同步远端后重试…"
+            git fetch --quiet origin "${GITHUB_REF_NAME}"
+            git rebase --quiet FETCH_HEAD || { git rebase --abort || true; exit 1; }
+            sleep 5
           done
+
+          echo "连续 3 次推送失败" >&2
+          exit 1

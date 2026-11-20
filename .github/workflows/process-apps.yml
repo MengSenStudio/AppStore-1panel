@@ -1,75 +1,111 @@
 name: Process Apps and Commit Changes
 
+# 由 apps/ 生成 appstore/ 与 dockge/，提交回 custom 分支，并同步到 AppStore-DPanel。
+# 触发方式改为“事件优先 + 低频兜底”：apps 有变化就跑，不再每 3 小时空跑一次。
+
 on:
   workflow_dispatch:
+  push:
+    branches: [ custom ]
+    paths:
+      - 'apps/**'
+      - 'process-apps.py'
+  # 自动合并用的是 GITHUB_TOKEN，其推送不会触发 push 事件，
+  # 所以合并后由 auto_merge 工作流用 workflow_dispatch 显式触发这里。
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: process-apps
+  # 同一时刻只允许一个生成任务；自动合并一批 PR 时会连续触发多次，
+  # 取消旧任务、只跑最新一次即可（生成是幂等的，最终结果以最后一次为准）。
+  cancel-in-progress: true
+
 jobs:
   process:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 30
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          ref: custom
 
       - name: Setup Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.15'
+          python-version: '3.13'
 
       - name: Install dependencies
+        run: python -m pip install --quiet --upgrade pip pyyaml
+
+      - name: Regenerate appstore/dockge and push
         run: |
-          python -m pip install --upgrade pip
-          pip install pyyaml
+          set -euo pipefail
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
-      - name: Run processing script
-        run: python process-apps.py
+          # 以远端最新提交为基准生成：推送失败时重来一遍，避免 rebase 生成物导致的冲突
+          for attempt in 1 2 3; do
+            git fetch --quiet origin custom
+            git reset --quiet --hard FETCH_HEAD
 
-      - name: Verify generated directories
-        run: |
-          ls -R appstore || echo "appstore not created"
-          ls -R dockge || echo "dockge not created"
+            python process-apps.py
 
-      - name: Configure Git
-        run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+            git add -A
+            if git diff --cached --quiet; then
+              echo "没有需要提交的变更"
+              exit 0
+            fi
 
-      - name: Commit and push changes
+            git commit --quiet -m "chore: regenerate appstore and dockge data [skip ci]"
+            if git push --quiet origin custom; then
+              echo "已提交并推送生成结果（第 ${attempt} 次尝试）"
+              exit 0
+            fi
+
+            echo "推送失败（第 ${attempt} 次），重新同步后重试…"
+            sleep 5
+          done
+
+          echo "连续 3 次推送失败，放弃本次运行" >&2
+          exit 1
+
+      - name: Clone AppStore-DPanel repository
+        run: git clone --quiet https://github.com/MengSenStudio/AppStore-DPanel.git target-repo
+
+      - name: Sync appstore to AppStore-DPanel
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DPANEL_TOKEN: ${{ secrets.GITHUBTOKEN }}
         run: |
-          git fetch origin custom
-
-          git add .
-          git diff --cached --quiet || git commit -m "Processed apps directory via GitHub Actions"
-
-          git rebase origin/custom || { echo "Rebase failed, trying to resolve"; git rebase --abort; git pull --rebase origin custom; }
-
-          git push origin custom
-
-      - name: Clone DPanel repository
-        run: |
-          git clone https://github.com/MengSenStudio/AppStore-DPanel.git target-repo
-
-      - name: Copy appstore to DPanel repository
-        run: |
-          if [ -d "target-repo/apps" ]; then
-            rm -rf target-repo/apps
-          fi
+          set -euo pipefail
+          rm -rf target-repo/apps
           mkdir -p target-repo/apps
           rsync -a appstore/ target-repo/apps/
 
-      - name: Commit and push to DPanel repository
-        working-directory: target-repo
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUBTOKEN }}
-        run: |
-          git config --global user.name "${{ github.actor }}"
-          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          
-          git add .
-          git diff --cached --quiet || git commit -m "Synced apps from source repository via GitHub Actions"
-          
-          git push https://x-access-token:${{ secrets.GITHUBTOKEN }}@github.com/MengSenStudio/AppStore-DPanel.git master
+          cd target-repo
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git add -A apps
+          if git diff --cached --quiet; then
+            echo "AppStore-DPanel 没有需要同步的变更"
+            exit 0
+          fi
+
+          git commit --quiet -m "chore: sync apps from AppStore-1panel"
+          for attempt in 1 2 3; do
+            if git push --quiet "https://x-access-token:${DPANEL_TOKEN}@github.com/MengSenStudio/AppStore-DPanel.git" HEAD:master; then
+              echo "已同步到 AppStore-DPanel"
+              exit 0
+            fi
+            echo "DPanel 推送失败（第 ${attempt} 次），同步远端后重试…"
+            git fetch --quiet origin master
+            git rebase --quiet origin/master || { git rebase --abort || true; exit 1; }
+            sleep 5
+          done
+
+          echo "连续 3 次同步 AppStore-DPanel 失败" >&2
+          exit 1
