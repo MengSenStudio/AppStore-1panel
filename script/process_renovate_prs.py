@@ -240,11 +240,16 @@ def check_state(commit_sha: str) -> Tuple[str, List[str]]:
 
     status, data = api("GET", f"/repos/{REPOSITORY}/commits/{commit_sha}/status")
     if status == 200 and isinstance(data, dict):
-        state = (data.get("state") or "").lower()
-        if state == "pending":
-            pending.append("commit-status")
-        elif state in ("failure", "error"):
-            failed.append("commit-status")
+        # 注意：提交上没有任何 commit status 时，GitHub 会返回 state=pending 且
+        # statuses 为空。不能据此判定“检查进行中”，否则只用 Actions check-runs
+        # 的 PR 会被永远挡住（这是本仓库的真实情况）。
+        combined_statuses = data.get("statuses") or []
+        if combined_statuses:
+            state = (data.get("state") or "").lower()
+            if state == "pending":
+                pending.append("commit-status")
+            elif state in ("failure", "error"):
+                failed.append("commit-status")
 
     if failed:
         return "failure", sorted(set(failed))

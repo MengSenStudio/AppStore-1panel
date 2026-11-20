@@ -58,4 +58,4 @@ jobs:
           MAX_REBASE_ATTEMPTS: '3'
           REBASE_COOLDOWN_MINUTES: '60'
           MERGE_METHOD: auto
-        run: python3 script/process_renovate_prs.py
+        run: python3 -u script/process_renovate_prs.py
