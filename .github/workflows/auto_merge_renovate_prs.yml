@@ -5,6 +5,8 @@ name: Auto Process Renovate PRs
 #   超时后反复勾选 rebase，并往 PR 里刷重复评论（历史 PR 上出现过 100 条相同评论）。
 # * 新实现：一次只评估一遍、绝不阻塞；由事件驱动重试；状态评论幂等；
 #   rebase 有次数上限和冷却时间；major 交给人工。逻辑见 script/process_renovate_prs.py。
+# * 注意：Renovate 由仓库安装的 Mend App 运行，勾选的 rebase 复选框会在其下一次
+#   运行时处理；本仓库没有可立即触发的自托管 Renovate Action。
 
 on:
   # Renovate 新建 / 更新 PR 时立即评估。
@@ -27,7 +29,7 @@ permissions:
   contents: write        # 合并 PR
   pull-requests: write   # 更新 PR 描述、评论
   issues: write          # 维护状态评论
-  actions: write         # 合并后触发 process-apps；勾选 rebase 后触发 Renovate
+  actions: write         # 合并后触发 process-apps 重新生成数据
 
 concurrency:
   group: auto-merge-renovate-prs

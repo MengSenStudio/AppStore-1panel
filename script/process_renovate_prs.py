@@ -46,7 +46,6 @@ BOT_LOGINS = {"github-actions[bot]", "github-actions"}
 
 # 运行后需要再次触发的工作流（见 workflow 文件里的说明）
 PROCESS_APPS_WORKFLOW = "process-apps.yml"
-RENOVATE_WORKFLOW = "renovate.yml"
 
 STATE_MARKER_RE = re.compile(r"<!--\s*automerge-state:(?P<json>.*?)\s*-->", re.DOTALL)
 REBASE_CHECKBOX_RE = re.compile(r"-\s*\[\s*\]\s*<!--\s*rebase-check\s*-->", re.IGNORECASE)
@@ -661,12 +660,12 @@ def main() -> int:
         "本次结果: 合并 {merged} 个, 触发 rebase {rebased} 个, 转人工 {manual} 个".format(**SUMMARY)
     )
 
-    # 有合并 => 重新生成 appstore/dockge 并同步；有 rebase => 立刻跑一次 Renovate
+    # 有合并 => 重新生成 appstore/dockge 并同步
     # （workflow_dispatch 可以绕过 GITHUB_TOKEN 的事件抑制）。
+    # 勾选的 rebase 复选框由 Renovate 自己在下一次运行时处理（本仓库的 Renovate
+    # 是 Mend App，没有自托管 Action 可以立即触发）。
     if SUMMARY["merged"]:
         dispatch_workflow(PROCESS_APPS_WORKFLOW)
-    if SUMMARY["rebased"]:
-        dispatch_workflow(RENOVATE_WORKFLOW)
 
     return 0
 
