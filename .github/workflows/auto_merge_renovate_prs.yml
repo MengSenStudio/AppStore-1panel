@@ -31,7 +31,9 @@ permissions:
 
 concurrency:
   group: auto-merge-renovate-prs
-  # 排队执行而不是取消：保证已合并的 PR 一定会触发后续的 appstore 重新生成
+  # 排队执行而不是取消：保证已合并的 PR 一定会触发后续的 appstore 重新生成。
+  # 事件密集时 GitHub 只保留最新一条排队运行、取消更早的排队运行；因为每次运行都是
+  # 全量评估，被取消的那次不会造成漏合并（下一次运行会把所有 PR 重新看一遍）。
   cancel-in-progress: false
 
 jobs:
@@ -51,10 +53,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BASE_BRANCH: ${{ github.event.repository.default_branch }}
           SELF_CHECK_NAME: process-renovate-prs
-          # 事件触发时只处理相关的那一个 PR，定时/手动触发时为空 -> 全量兜底扫描。
-          # 这样一波 Renovate 推送不会变成几十次全量 API 扫描。
-          TARGET_PR: ${{ github.event.pull_request.number }}
-          TARGET_BRANCH: ${{ github.event.workflow_run.head_branch }}
           MAX_REBASE_ATTEMPTS: '3'
           REBASE_COOLDOWN_MINUTES: '60'
           MERGE_METHOD: auto

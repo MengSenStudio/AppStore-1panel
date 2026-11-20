@@ -560,7 +560,7 @@ def process_pr(pr: Dict[str, Any]) -> None:
         print(f"#{number} 无法判定为 minor/patch（{update_type or 'unknown'}），跳过")
         return
 
-    detail = pr if pr.get("mergeable") is not None else get_pr_detail(number)
+    detail = get_pr_detail(number)
     if not detail or detail.get("state") != "open" or detail.get("merged"):
         return
     head_sha = ((detail.get("head") or {}).get("sha")) or ""
@@ -608,37 +608,14 @@ def process_pr(pr: Dict[str, Any]) -> None:
         print(f"#{number} 未处理的可合并状态: {mergeable_state}")
 
 
-def get_pr_by_number(pr_number: int) -> Optional[Dict[str, Any]]:
-    status, data = api("GET", f"/repos/{REPOSITORY}/pulls/{pr_number}")
-    return data if status == 200 and isinstance(data, dict) else None
-
-
 def select_candidates() -> List[Dict[str, Any]]:
-    """挑选本次要处理的 PR。
+    """列出所有打开的 Renovate PR。
 
-    由 PR / 工作流事件触发时只处理对应的那个 PR（省掉大量重复的 API 调用，
-    避免一波 Renovate 推送后几十次“全量扫描”把接口配额打满）；
-    定时和手动触发时才全量扫描，作为兜底。
+    每次运行都做一次全量评估。单个 PR 只需 2~3 次 API 调用，十来个 PR 也只要
+    十几秒；而“只处理触发事件对应的 PR”会在事件密集时漏掉 PR —— GitHub 的
+    concurrency 队列只保留最新一条排队运行、会取消更早的排队运行，被取消的那些
+    PR 就再也等不到处理（这正是之前一批 PR 迟迟不合并的原因）。
     """
-    target_pr = (os.environ.get("TARGET_PR") or "").strip()
-    target_branch = (os.environ.get("TARGET_BRANCH") or "").strip()
-
-    if target_pr.isdigit():
-        pr = get_pr_by_number(int(target_pr))
-        if not pr:
-            print(f"PR #{target_pr} 不存在或不可见")
-            return []
-        if not is_renovate_pr(pr):
-            print(f"PR #{target_pr} 不是 Renovate/Mend 的 PR，跳过")
-            return []
-        return [pr]
-
-    if target_branch:
-        prs = [p for p in paginate(f"/repos/{REPOSITORY}/pulls?state=open") if p.get("state") == "open"]
-        matched = [p for p in prs if ((p.get("head") or {}).get("ref")) == target_branch]
-        print(f"分支 {target_branch} 关联的打开 PR: {len(matched)} 个")
-        return [p for p in matched if is_renovate_pr(p)]
-
     prs = [p for p in paginate(f"/repos/{REPOSITORY}/pulls?state=open") if p.get("state") == "open"]
     candidates = [p for p in prs if is_renovate_pr(p)]
     print(f"打开中的 PR {len(prs)} 个，其中 Renovate/Mend 的 {len(candidates)} 个")
