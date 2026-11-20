@@ -42,9 +42,11 @@ jobs:
           set -euo pipefail
           chmod +x script/renovate-app-version.sh
 
-          # 只看本次推送改动的 docker-compose.yml（合并提交也展开）
+          # 只看本次推送的提交改动的 docker-compose.yml。
+          # 不加 -m：Renovate 推送的都是普通单父提交；如果推送的是 merge commit，
+          # -m 会把基线侧的改动也算进来，可能误改无关的应用目录，这里宁可跳过。
           mapfile -t files < <(
-            git diff-tree --no-commit-id --name-only -r -m HEAD \
+            git diff-tree --no-commit-id --name-only -r HEAD \
               | grep -E '^apps/[^/]+/[^/]+/docker-compose\.yml$' \
               | sort -u || true
           )
