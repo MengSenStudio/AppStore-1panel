@@ -7,19 +7,17 @@ services:
     env_file:
     - ./envs/global.env
     - .env
-    environment:
-      TZ: Europe/Rome
-    image: leolitaly/mdc-ngi:26.9.1
+    image: mdcng/mdc:v1.36.0
     labels:
       createdBy: Apps
     networks:
     - 1panel-network
     ports:
-    - ${PANEL_APP_PORT_HTTP}:19218
-    restart: unless-stopped
-    security_opt:
-    - no-new-privileges:true
-    stop_grace_period: 40s
-    user: 0:0
+    - ${PANEL_APP_PORT_HTTP}:9208
+    restart: always
     volumes:
-    - ${MDC_NG_ROOT_PATH}/data:/data
+    - ${MDC_NG_ROOT_PATH}/config:/config
+    - ${MDC_NG_ROOT_PATH}/media:/media
+    - ${CUSTOM_MOUNT_DIRECTORY_1:-./default_mount_1}:${CUSTOM_MOUNT_DIRECTORY_1:-/default_mount_1}
+    - ${CUSTOM_MOUNT_DIRECTORY_2:-./default_mount_2}:${CUSTOM_MOUNT_DIRECTORY_2:-/default_mount_2}
+    - ${CUSTOM_MOUNT_DIRECTORY_3:-./default_mount_3}:${CUSTOM_MOUNT_DIRECTORY_3:-/default_mount_3}
