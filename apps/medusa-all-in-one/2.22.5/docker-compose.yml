@@ -50,7 +50,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    image: qyg2297248353/medusa:v2.22.5
+    image: qyg2297248353/medusa:v2.23.0
     container_name: ${CONTAINER_NAME}
     labels:
       createdBy: "Apps"
