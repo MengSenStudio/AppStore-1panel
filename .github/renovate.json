@@ -201,9 +201,15 @@
     },
     {
       "matchFileNames": [
-        "apps/jellyfin/10.10.*/*.yml"
+        "apps/jellyfin/10.11.*/*.yml"
       ],
-      "allowedVersions": ">=10.10"
+      "allowedVersions": "<12.0"
+    },
+    {
+      "matchFileNames": [
+        "apps/jellyfin/12.*/*.yml"
+      ],
+      "allowedVersions": ">=12.0"
     },
     {
       "matchFileNames": [
