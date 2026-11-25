@@ -4,7 +4,7 @@ networks:
 
 services:
   mdc-ng:
-    image: leolitaly/mdc-ngi:26.11.24
+    image: leolitaly/mdc-ngi:26.11.25
     container_name: ${CONTAINER_NAME}
     user: "0:0"
     labels:
